@@ -1,0 +1,51 @@
+
+```powershell
+# Define the path to the folder containing the SVG files
+$svgFolderPath = "C:\Path\To\Svg\Folder"
+
+# Define the path where the React components should be saved
+$reactComponentsPath = "C:\Path\To\React\Components"
+
+# Create the output directory if it doesn't already exist
+if (-not (Test-Path -Path $reactComponentsPath)) {
+    New-Item -ItemType Directory -Path $reactComponentsPath
+}
+
+# Get all SVG files in the folder
+$svgFiles = Get-ChildItem -Path $svgFolderPath -Filter *.svg
+
+foreach ($file in $svgFiles) {
+    # Create a valid React component name based on the file name
+    $componentName = [IO.Path]::GetFileNameWithoutExtension($file.Name)
+    $componentName = [Text.RegularExpressions.Regex]::Replace($componentName, '(\p{Ll})(\p{Lu})', '$1 $2')
+    $componentName = $componentName -replace '[^a-zA-Z0-9]', ' '
+    $componentName = $componentName -split ' ' | ForEach-Object { $_.Substring(0, 1).ToUpper() + $_.Substring(1).ToLower() }
+    $componentName = $componentName -join ''
+
+    # Read the SVG file content
+    $svgContent = Get-Content -Path $file.FullName -Raw
+
+    # Clean and prepare the SVG content for JSX
+    $svgContent = $svgContent -replace 'xmlns="http://www.w3.org/2000/svg" ', ''
+    $svgContent = $svgContent -replace '"', "'"
+
+    # Prepare the React component content
+    $componentContent = @"
+import React from 'react';
+
+const $componentName = () => (
+    $svgContent
+);
+
+export default $componentName;
+"@
+
+    # Define the output file path
+    $outputFilePath = Join-Path -Path $reactComponentsPath -ChildPath "$componentName.jsx"
+
+    # Save the React component to a .jsx file
+    $componentContent | Out-File -FilePath $outputFilePath -Encoding UTF8
+}
+
+Write-Host "All SVGs have been converted to React components."
+```
