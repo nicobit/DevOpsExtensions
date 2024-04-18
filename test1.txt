@@ -29,6 +29,30 @@ foreach ($file in $svgFiles) {
     $svgContent = $svgContent -replace 'xmlns="http://www.w3.org/2000/svg" ', ''
     $svgContent = $svgContent -replace '"', "'"
 
+###################################################################
+
+    # Convert style="key: value;" to style={{key: 'value'}}
+    $svgContent = $svgContent -replace 'style="([^"]+)"', {
+        $styleString = $_.Groups[1].Value
+        $styleProperties = $styleString -split ';' | Where-Object { $_ -match '\S' } | ForEach-Object {
+            $keyValue = $_ -split ':'
+            $key = $keyValue[0].Trim().Replace('-', '')
+            $value = $keyValue[1].Trim()
+            "`"$key`": `"$value`""
+        }
+        'style={{' + ($styleProperties -join ', ') + '}}'
+    }
+
+    # Convert hyphenated attributes to camelCase
+    $svgContent = $svgContent -replace '([a-z])-([a-z])', {
+        $first = $_.Groups[1].Value
+        $second = $_.Groups[2].Value.ToUpper()
+        $first + $second
+    }
+
+
+
+###################################################################
     # Prepare the React component content
     $componentContent = @"
 import React from 'react';
